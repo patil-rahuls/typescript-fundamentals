@@ -1,0 +1,328 @@
+MySQL
+
+DATABASE
+    #CREATE DATABASE <db_name>#
+        Creates a database. Two files are created in the file system. .mdf(Master Data File) and .ldf(Log Data File) files.
+
+
+    #MULTI-USER Database Systems#
+        multiple users can access a database system simultaneously.
+        We can have multiple users that can connect with the created MySQL Databases. By default, Databases are in MULTI-USER mode.
+
+
+    #DROP DATABASE <db_name>#
+        Deletes a database. Both the files .mdf(Master Data File) and .ldf(Log Data File) are deleted.
+        However, DROP will not work when some other user is working(connected) with the Database
+        (need not be querying, the user could just be connected).
+            e.g. user1 is querying something, which is taking longer, lets say 2 minutes.
+            and now, user2 is trying to drop the database, then it will show 'Executing...'
+        To fix this, we need to put the Database in SINGLE-USER mode.
+            ALTER DATABASE <db_name> SET SINGLE_USER WITH ROLLBACK IMMEDIATE.
+            This will rollback all incomplete transactions and closes any connections to the database.
+
+        [To Do - User Sessions, Locking DBs by Sessions, Master/Slave MySQL, Distributed MySQL Database]
+
+
+TABLE
+    #Creating Tables in MySQL#
+        Primary Key - used to uniquely identify each record within the table.
+
+        // USE <db_name>
+        USE Sample_DB // Select/Use the database on which the following query will be worked upon.
+        CREATE TABLE tblGender (
+            ID int NOT NULL PRIMARY KEY,
+            GENDER VARCHAR(20) NOT NULL,
+        );
+        // 'tblGender' table gets created in database 'Sample_DB'
+
+        CREATE TABLE tblPerson (
+            ID int NOT NULL PRIMARY KEY,
+            NAME VARCHAR(200) NOT NULL,
+            EMAIL VARCHAR(200) NOT NULL UNIQUE,
+            GENDER_ID NULL // this can accpet null values.
+        );
+
+
+    #INSERT#
+        INSERT INTO tblPerson (NAME, EMAIL, GENDER_ID) VALUES ('Rahul', 'rahp@tcs.com')
+        // When a column value is not specified in insert statement, then NULL is inserted. In above case, GENDER_ID will be NULL.
+
+
+    #FOREIGN KEY CONSTRAINT#
+        are used to enforce database integrity.
+        A FOREIGN KEY in one table points to a PRIMARY KEY in another table.
+        A FOREIGN KEY constraint prevents invalid data from being inserted into the foriegn key column. The values that you insert
+        into the foriegn key column has to be one of the values contained in the column of the table it points to.
+
+        ALTER TABLE tblPerson ADD CONSTRAINT tblPerson_Gender_FK FORIEGN KEY (GENDER_ID) REFERENCES tblGender(ID)
+        // By convention, we call 'tblPerson' the Foriegn Key Table and 'tblGender' the Primary Key Table.
+
+
+    #DEFAULT CONSTRAINT#
+        A default constraint is used to insert a default value into a column.
+
+        Observe the previous INSERT-
+        INSERT INTO tblPerson (NAME, EMAIL, GENDER_ID) VALUES ('Rahul', 'rahp@tcs.com')
+        // When a column value is not specified in insert statement, then NULL is inserted. In above case, GENDER_ID will be NULL.
+        // But, we can have a default value in above case, using Default Constraint.
+
+        ALTER TABLE tblPerson
+        ADD CONSTRAINT DF_tblPerson_Gender_ID
+        DEFAULT 3 FOR GENDER_ID
+
+        // Altering an existing column to add a default constraint.
+        ALTER TABLE {TABLE_NAME}
+        ADD CONSTRAINT {CONSTRAINT_NAME}
+        DEFAULT {DEFALT_VALUE} FOR {EXISTING_COL_NAME}
+
+        // Adding a new column, with default value to an existing table.
+        ALTER TABLE {TABLE_NAME}
+        ADD {COLUMN_NAME} {DATA_TYPE} {NULL | NOT NULL}
+        CONSTRAINT {CONSTRAINT_NAME} DEFAULT {DEFALT_VALUE}
+
+        // Dropping a constraint.
+        ALTER TABLE {TABLE_NAME}
+        DROP CONSTRAINT {CONSTRAINT_NAME}
+
+        // Behaviour of Inserting NULL with a Default constraint.
+        // The default value is added to all rows for which no other value is specified. except NULL.
+
+        INSERT INTO tblPerson (NAME, EMAIL, GENDER_ID) VALUES ('AKSHAY', 'AKSHAY@GMAIL.COM', NULL)
+        IMP - EVEN IF YOU SUPPLY A DEFAULT VALUE CONSTRAINT, if, in an INSERT stmt you have provided value 'NULL', then it will insert 'NULL'
+        and not the default value.
+        // Default value will be considered ONLY when we didn't pass any value in INSERT statement.
+
+
+    #CASCADING REFERENTIAL INTEGRITY CONSTRAINT# - MSSQL
+    #REFERENTIAL ACTIONS# - MySQL
+        'ON UPDATE' and 'ON DELETE'
+        See Referential Actions section on https://dev.mysql.com/doc/refman/8.0/en/create-table-foreign-keys.html
+        e.g.
+        CREATE TABLE COMPANY (
+            company_id INT NOT NULL,
+            company_name VARCHAR(50),
+            PRIMARY KEY (company_id)
+        ) ENGINE=INNODB;
+
+        CREATE TABLE USER (
+            user_id INT,
+            user_name VARCHAR(50),
+            company_id INT,
+            INDEX company_id_idx (company_id),
+            FOREIGN KEY (company_id) REFERENCES COMPANY (company_id) ON...
+        ) ENGINE=INNODB;
+
+        Let's look at the ON UPDATE clause:
+            -> ON UPDATE RESTRICT : the default : if you try to update a 'company_id' field in table COMPANY the engine will reject the operation if one USER at least links on this company.
+            -> ON UPDATE NO ACTION : same as RESTRICT.
+            -> ON UPDATE CASCADE : the best one usually : if you update a 'company_id' field in a row of table COMPANY the engine will update it accordingly on all USER rows referencing this COMPANY (but no triggers activated on USER table, warning). The engine will track the changes for you, it's good.
+            -> ON UPDATE SET NULL : if you update a 'company_id' field in a row of table COMPANY the engine will set related USERs company_id to NULL (USERs company_id should not be NOT NULL).
+
+        And now on the ON DELETE side:
+            -> ON DELETE RESTRICT : the default : if you try to delete a company_id Id in table COMPANY the engine will reject the operation if one USER at least links on this company, can save your life.
+            -> ON DELETE NO ACTION : same as RESTRICT
+            -> ON DELETE CASCADE : dangerous : if you delete a company row in table COMPANY the engine will delete as well the related USERs. This is dangerous but can be used to make automatic cleanups on secondary tables (so it can be something you want, but quite certainly not for a COMPANY<->USER example)
+            -> ON DELETE SET NULL : handful : if you delete a COMPANY row the related USERs will automatically have the relationship to NULL.
+
+        My Preference :
+        ON DELETE RESTRICT ON UPDATE CASCADE.
+        Use ON DELETE CASCADE for track tables (logs--not all logs--, things like that) and
+        ON DELETE SET NULL when the master table is a 'simple attribute' for the table containing the foreign key, like a JOB table for the USER table.
+
+        IMP - Cascades are not firing triggers.
+        Triggers are not activated by foreign key actions. MySQL triggers activate only for changes made to tables by SQL statements. They do not activate for changes in views, nor by changes to tables made by APIs that do not transmit SQL statements to the MySQL Server.
+
+
+    #CHECK CONSTRAINTS#
+        e.g. add a check for age column while inserting values in the user table.
+        a constraint is a boolean expression.
+        like age < 100
+
+        ALTER TABLE {table_name}
+        ADD CONSTRAINT {constraint_name} CHECK {boolean_expression}
+            if the boolean_expression returns true, the value gets inserted else not.
+
+        To drop a constraint.
+        ALTER TABLE {table_name}
+        DROP CONSTRAINT {constraint_name};
+
+
+    #AUTO_INCREMENT#
+        CREATE TABLE animals (
+            id MEDIUMINT NOT NULL AUTO_INCREMENT,
+            name CHAR(30) NOT NULL,
+            PRIMARY KEY (id)
+        );
+
+        INSERT INTO animals (name) VALUES
+            ('dog'),('cat'),('penguin'),
+            ('lax'),('whale'),('ostrich');
+
+        SELECT * FROM animals;
+        +----+---------+
+        | id | name    |
+        +----+---------+
+        |  1 | dog     |
+        |  2 | cat     |
+        |  3 | penguin |
+        |  4 | lax     |
+        |  5 | whale   |
+        |  6 | ostrich |
+        +----+---------+
+        When you insert any other value into an AUTO_INCREMENT column, the column is set to that value and the sequence is reset so that the next automatically generated value follows sequentially from the largest column value. For example:
+
+        INSERT INTO animals (id,name) VALUES(100,'rabbit');
+        INSERT INTO animals (id,name) VALUES(NULL,'mouse');
+        SELECT * FROM animals;
+        +-----+-----------+
+        | id  | name      |
+        +-----+-----------+
+        |   1 | dog       |
+        |   2 | cat       |
+        |   3 | penguin   |
+        |   4 | lax       |
+        |   5 | whale     |
+        |   6 | ostrich   |
+        | 100 | rabbit    |
+        | 101 | mouse     |
+        +-----+-----------+
+
+        DATA TYPE FOR AUTO_INCREMENT FIELD - Use the smallest integer data type for the AUTO_INCREMENT column that is large enough to hold the maximum sequence value you require. When the column reaches the upper limit of the data type, the next attempt to generate a sequence number fails. Use the UNSIGNED attribute if possible to allow a greater range. For example, if you use TINYINT, the maximum permissible sequence number is 127. For TINYINT UNSIGNED, the maximum is 255.
+
+        LAST_INSERT_ID() - Value of the AUTOINCREMENT column for the last INSERT.
+        SELECT LAST_INSERT_ID();
+        -> 101
+
+
+    #UNIQUE KEY CONSTRAIN#
+        A table can only have 1 Primary key. So in order to enforce uniqueness of a column, we use UNIQUE KEY.
+        IMP - Difference between Primary Key and Unique Key
+            1. A table can have only one Primary key, but more than one UNIQUE key.
+            2. Primary key does not allow NULL, however, Unique key allows one NULL.
+
+        ALTER TABLE tblPerson
+        ADD CONSTRAIN UQ_tblPerson_Email UNIQUE (EMAIL)
+
+
+    #EVERYTIHNG ABOUT SELECT STATEMENT#
+        DISTINCT ROWS
+            SELECT DISTINCT CITY FROM tbl_person
+            -> returns all distinct values from the city column.
+
+            SELECT DISTINCT CITY, NAME FROM tbl_person
+            -> returns all distinct values from the combination of <CITY NAME> from the table.
+
+        OPERATORS AND WILDCARDS.
+            SELECT * FROM tbl_person WHERE CITY = 'london'
+            SELECT * FROM tbl_person WHERE CITY <> 'london' OR SELECT * FROM tbl_person WHERE CITY != 'london'
+
+            other operators - IN, BETWEEN, LIKE, NOT
+            SELECT * FROM tbl_person WHERE CITY  LIKE 'l%' // city starts with letter 'l'
+
+            SELECT * FROM tbl_person WHERE EMAIL NOT LIKE '%@%' // EMAIL WHICH DOES NOT HAVE @ LETTER.
+
+            WILDCARDs - %  _  []  [^]
+            % - speficies 0 or more characters. OR simply a placeholder or a substitute for some characters.
+            _  - specifies exactly one character.
+            SELECT * FROM tbl_person WHERE CITY LIKE '_@_.com' // get all records with email in this format - a@a.com
+
+            [] - any character with in the brackets.
+            SELECT * FROM tbl_person WHERE CITY LIKE '[mst]%' // get all records whose name starts with either 'm', 's' or 't'
+
+            [^] - Not any character with in the brackets.
+            SELECT * FROM tbl_person WHERE CITY LIKE '[mst]%' // get all records whose name starts with either 'm', 's' or 't'
+
+        ORDER BY
+            SELECT * FROM tbl_person ORDER BY name // sorts records in acesning order of names (BY DEFAULT ASC)
+            SELECT * FROM tbl_person ORDER BY name desc // order by name in descing order.
+
+        LIMIT -
+            SELECT * FROM tbl_person Limit 10;
+            SELECT column FROM table LIMIT 18 OFFSET 8;
+            -> fetch 18 records, begin with record number 9 (OFFSET 8)
+            OR
+            SELECT column FROM table LIMIT 8, 18
+            -> start from 9th record, and fetch the 18 records from that point.
+
+
+    #GROUP BY#
+        is used to group a selected set of rows into a set of summary rows by the values or one or more columns or expressions.
+        GROUP BY is always used with an aggregate function.
+        SUM, MIN, MAX, COUNT etc.
+        select SUM(salary) from tbl_employee; //aggregation fn. total salary
+        select MIN(salary) from tbl_employee; //aggregation fn. minimum salary
+
+        e.g. get all salaries paid to employees by city.
+             |    sum()     |                   | group by city|
+
+        select city, sum(salary) AS totalSalary from tbl_employee group by city;
+        when grouping by a field lets say the 'city', it should also be present in select clause.
+
+        grouping by multiple columns
+            select
+                city,
+                gender,
+                sum(salary) AS totalSalary
+            from tbl_employee
+            group by
+                city,
+                gender
+            order by
+                city;
+
+        using multiple aggregate functions
+            select
+                city,
+                gender,
+                sum(salary) AS totalSalary ,
+                count(id) AS totalEmpoyees
+            from tbl_employee
+            group by
+                city,
+                gender
+            order by
+                city;
+
+        filtering the groups.
+            select
+                ...
+            from tbl_employee
+            where gender = 'male'
+            group by
+                ...
+            order by
+                city;
+
+        using HAVING - HAS TO COME AFTER THE GROUP BY CLAUSE.
+            select
+                ...
+            from tbl_employee
+            group by
+                ...
+            HAVING gender = 'male'
+            order by
+                city;
+
+        Difference between WHERE and HAVING-
+            where - all the rows from the table with gender=male are retrieved and then grouped(by gender and city).
+            having - all the rows from the table are retrieved, then grouped (by gender and city) and then filtered by gender = male.
+
+            in simple terms-"
+                Where clause filters rows before aggregation(GROUPING),
+                HAVING clause  filters groups after aggregation(GROUPING) is performed.
+
+            Where can be used with select, insert, update and delete.
+            having can only be used with select.
+
+            aggregate functions cannot be used in the where clause(unless it is a subquery contained in a having clause).
+            whereas, aggregate functions can only be used in having clause.
+                e.g.
+                    select * from tblEmployees where SUM(salary) > 15000; // will not work aggregate fn cannot be used in where clause.
+
+                    select  ... from tbl_employee  group by ... HAVING SUM(salary) > 15000 // this works.
+
+
+    #JOINS#
+        inner joins
+        cross joins
+        outer joins -> left, right, and full

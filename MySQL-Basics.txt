@@ -1,0 +1,111 @@
+Continued -
+Joins
+      Inner Join
+            Intersection. Matching rows between the two(JOINED) tables only are retrieved.             SELECT .......
+            FROM tbl1             JOIN tbl2
+            ON tbl1.dept_id = tbl2.id
+            If the column name to be joined on is same in both tables,             SELECT .......
+            FROM tbl1
+            JOIN tbl2
+            ON dept_id
+
+      Outer Join
+            Matching rows between the two(JOINED) tables + non matching rows from the left
+SELECT .......             FROM tbl1
+            LEFT JOIN tbl2
+            ON tbl1.dept_id = tbl2.id
+            // This will retrieve all rows from tbl1 + matching rows between tables tbl1 and tbl2.             // for non matching results, the respective column (if selected) will have NULL value.
+            // similarly RIGHT JOIN.
+
+            Full Outer Join.
+SELECT .......             FROM tbl1
+            FULL JOIN tbl2
+            ON tbl1.dept_id = tbl2.id
+
+      Cross Join
+            Doesn't have ON clause.
+            Gives cartesian product of the number of rows in both the tables.
+            e.g. tbl1 has 10 rows, and tbl2 has 4 rows, then a cross join between them would result in 40 rows.
+            SELECT .......
+            FROM tbl1
+            CROSS JOIN tbl2
+
+SELF Joins.
+ table are retrieved.
+
+             Matching rows between the two(JOINED) tables + non matching rows from both the
+ tables are retrieved.
+             // can result in retrieval of a large number set of results.
+
+https://outlook.live.com/mail/0/id/AQQkADAwATNiZmYAZC1kM2M1LWFiNjEtMDACLTAwCgAQAELsKYB6BRZCgbRiqvEGmIk%3D 1/4
+19/03/2026, 14:38 Mail - Rahul Patil - Outlook
+       Joining a table with itself.
+       It can be a Inner, Outer or Cross Join based on how we join it.
+       You use a self join when a table references data in itself.
+      E.g., an Employee table may have a managerID column that points to the employee that
+is the boss of the current employee.
+            SELECT A.name as EMPLOYEE, B.name as Manager,             FROM tbl1 A
+            JOIN tbl1 B
+            ON A.id = B.manager_id
+            SELECT A.name as EMPLOYEE, B.name as Manager,             FROM tbl1 A
+            LEFT JOIN tbl1 B
+SELECT A.name as EMPLOYEE, B.name as Manager,             FROM tbl1 A
+            CROSS JOIN tbl1 B
+END
+SELECT
+                  A.name as EMPLOYEE,
+                  CASE
+                        WHEN B.name IS NULL THEN 'No Manager' ELSE B.name                   END as Manager,
+            FROM tbl1 A
+            LEFT JOIN tbl1 B
+            ON A.id = B.manager_id
+             -> 1
+            mysql> SELECT COALESCE(NULL,NULL,NULL);
+                  ON A.id = B.manager_id
+
+ Replacing NULL values.
+       IS NULL with CASE (IF condition)
+             SELECT
+                   CASE WHEN <EXPRESSION> THEN <required value> ELSE <else_value>
+             FROM ...
+             e.g.
+
+
+       COALESCE() - Returns first Non NULL value, else returns the LAST value of the values
+ provided to it.
+             mysql> SELECT COALESCE(NULL,1);
+
+
+
+         -
+-> NULL
+-
+ UNION & UNION ALL
+       UNION - Combine result set of two or more queries.
+ UNION ALL
+             SELECT * FROM tbl_india_customers
+             UNION ALL
+             SELECT * FROM tbl_US_customers
+             // UNION ALL gets all rows including the DUPICATES.
+UNION
+             SELECT * FROM tbl_india_customers
+             UNION
+             SELECT * FROM tbl_US_customers
+             // removes DUPICATES and sorts the result.
+https://outlook.live.com/mail/0/id/AQQkADAwATNiZmYAZC1kM2M1LWFiNjEtMDACLTAwCgAQAELsKYB6BRZCgbRiqvEGmIk%3D 2/4
+
+19/03/2026, 14:38 Mail - Rahul Patil - Outlook
+       IMP - for UNION and UNION ALL to work, the number, datatypes, and the order of the
+ columns in both SELECT stmt should be same.
+       DIFFERENCES -
+             UNION removes duplicate rows whereas, UNION ALL doesn't.
+             UNION has to perform distinct sort to remove duplicates, which makes it less faster
+ than UNION ALL.
+       ORDER BY should be only at the last/end of SELECT stmts of UNION chain.
+             SELECT * FROM tbl_india_customers
+             UNION
+             SELECT * FROM tbl_US_customers
+             ORDER BY ....
+
+UNION combines the rows from the tables, WHEREAS, JOIN retrieves the data
+based on the logical relationship between the tables.
